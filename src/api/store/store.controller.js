@@ -6,6 +6,12 @@ export const createStore = (req, res) => {
 };
 
 export const getStore = (req, res) => {
-  console.log(req.body);
+  const validateKey = {
+    store: { nullable: false },
+    storeId: { nullable: false },
+  };
+  if (!validateQuery(req.query, validateKey, res)) {
+    return;
+  }
   res.send('get');
 };
