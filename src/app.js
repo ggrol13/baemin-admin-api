@@ -1,23 +1,29 @@
-const express = require('express')
-const bodyParser = require('body-parser')
-const app = express()
-const dotenv = require('dotenv')
-const { connectMongo } = require('./middleware/mongoose')
-;(async () => {
-  dotenv.config()
-  const port = process.env.PORT || 3000
-  await connectMongo().catch()
+import express from 'express';
+import bodyParser from 'body-parser';
+import morgan from 'morgan';
 
-  app.use(bodyParser.json())
-  app.use(bodyParser.json({ type: 'application/vnd.api+json' }))
-  app.use(bodyParser.urlencoded({ extended: false }))
+const app = express();
+import dotenv from 'dotenv';
+import { connectMongo } from './middleware/mongoose.js';
+import { routerV1 } from './middleware/router.main.js';
 
+(async () => {
+  dotenv.config();
+  const port = process.env.PORT || 3000;
+  await connectMongo().catch();
+
+  app.use(morgan('dev'));
+  app.use(bodyParser.json());
+  app.use(bodyParser.json({ type: 'application/vnd.api+json' }));
+  app.use(bodyParser.urlencoded({ extended: false }));
+  routerV1(app);
   const options = {
     host: '0.0.0.0',
     port,
-  }
-
+  };
+  
+  
   app.listen(options, () => {
-    console.log('server is on port ' + port)
-  })
-})()
+    console.log('server is on port ' + port);
+  });
+})();
