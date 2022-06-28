@@ -21,8 +21,7 @@ import { routerV1 } from './middleware/router.main.js';
     host: '0.0.0.0',
     port,
   };
-  
-  
+
   app.listen(options, () => {
     console.log('server is on port ' + port);
   });
