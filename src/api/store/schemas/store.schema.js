@@ -1,6 +1,6 @@
-const mongoose = require('mongoose');
+import mongoose from "mongoose";
 
-const storeSchema = new mongoose.Schema({
+const store = new mongoose.Schema({
   name: { type: String, required: true },
   phone: { type: String, required: true },
   address: { type: String, required: true },
@@ -11,6 +11,7 @@ const storeSchema = new mongoose.Schema({
   info: { type: String, required: true },
   menuCategory: [
     {
+      isRepresent: { type: Boolean, default: false },
       name: { type: String, required: true },
       menu: [
         {
@@ -29,4 +30,4 @@ const storeSchema = new mongoose.Schema({
   ],
 });
 
-module.exports = mongoose.model('Store', storeSchema);
+export const storeSchema = mongoose.model("Store", store, "stores");
