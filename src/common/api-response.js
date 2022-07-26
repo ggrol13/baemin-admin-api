@@ -10,7 +10,7 @@ export const ApiError = (error, res, cause) => {
   });
 };
 
-export const ApiSuccess = async (callback, res) => {
+export const ApiSuccess = async (status, data, res) => {
   let success = OK;
   if (!data || data.length === 0) {
     success = NO_CONTENT;
