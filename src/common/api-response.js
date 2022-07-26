@@ -1,9 +1,10 @@
-import { NO_CONTENT, OK } from './http-code.js';
+import { NO_CONTENT, OK } from "./http-code.js";
 
-export const ApiError = (error, res) => {
+export const ApiError = (error, res, cause) => {
   res.status(error.code).json({
     response: {
       message: error.message,
+      cause,
       status: false,
     },
   });
@@ -11,7 +12,6 @@ export const ApiError = (error, res) => {
 
 export const ApiSuccess = async (callback, res) => {
   let success = OK;
-  const data = await callback();
   if (!data || data.length === 0) {
     success = NO_CONTENT;
   }
@@ -20,6 +20,7 @@ export const ApiSuccess = async (callback, res) => {
     response: {
       message: success.message,
       status: true,
+      success: status.message,
       body: data,
     },
   });
