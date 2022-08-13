@@ -20,8 +20,8 @@ const store = new mongoose.Schema({
           imgPath: String,
           options: [
             {
-              name: { type: String, required: true },
-              price: { type: Number, required: true },
+              name: String,
+              price: Number,
             },
           ],
         },

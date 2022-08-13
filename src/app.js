@@ -14,9 +14,12 @@ import { routerV1 } from "./middleware/router.main.js";
 
   app.use(morgan("dev"));
   app.use(bodyParser.json());
-  app.use(bodyParser.json({ type: "application/vnd.api+json" }));
-  app.use(bodyParser.urlencoded({ extended: false }));
+  // app.use(bodyParser.json({ type: "application/vnd.api+json" }));
+  // app.use(bodyParser.urlencoded({ extended: false }));
   routerV1(app);
+
+  app.listen(3000);
+
   const options = {
     host: "0.0.0.0",
     port,

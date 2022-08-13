@@ -3,7 +3,7 @@ import { storeSchema } from "../schemas/store.schema.js";
 
 export const saveStoreCategory = async (storeCategory) => {
   const model = new storeCategorySchema(storeCategory);
-  return await model.save();
+  await model.save();
 };
 
 export const saveCategoryIdStore = async (storeid, storeCategoryId) => {
@@ -20,7 +20,7 @@ export const saveStoreIdCategory = async (storeId, storeCategoryId) => {
   );
 };
 
-export const findStoreCategoryById = async (id) => {
+export const aggregateStoreCategoryById = async (id) => {
   return await storeCategorySchema
     .aggregate([
       {
@@ -40,6 +40,32 @@ export const findStoreCategoryById = async (id) => {
     .exec();
 };
 
+export const findStoreCategoryById = async (storeId) => {
+  return await storeCategorySchema.findOne({ _id: storeId }).exec();
+};
+
 export const findStoreCategoryByName = async (name) => {
   return await storeCategorySchema.findOne({ name }).exec();
+};
+
+export const editStoreCategory = async (name, file, id) => {
+  if (!file) {
+    await storeCategorySchema.findOneAndUpdate({ _id: id }, { $set: { name } });
+  } else if (!name) {
+    const path = file.path;
+    await storeCategorySchema.findOneAndUpdate(
+      { _id: id },
+      { $set: { imgPath: path } }
+    );
+  } else {
+    const path = file.path;
+    await storeCategorySchema.findOneAndUpdate(
+      { _id: id },
+      { $set: { name, imgPath: path } }
+    );
+  }
+};
+
+export const eraseStoreCategory = async (id) => {
+  await storeCategorySchema.findOneAndDelete({ _id: id });
 };

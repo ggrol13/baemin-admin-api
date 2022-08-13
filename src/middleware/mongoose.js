@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 let isConn = false;
 export const connectMongo = async () => {
@@ -8,7 +8,7 @@ export const connectMongo = async () => {
   try {
     const db = await mongoose.connect(process.env.MONGO_URL);
     isConn = db.connection.readyState === 1;
-    console.log('mongo connect');
+    console.log("mongo connect");
   } catch (e) {
     return await Promise.reject(e);
   }
