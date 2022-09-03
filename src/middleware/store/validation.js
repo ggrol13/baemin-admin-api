@@ -4,27 +4,27 @@ import {
 } from "../../api/store/repositories/store-category.repo.js";
 import {
   menuValidate,
+  putMenuValidate,
   putStoreCategoryValidate,
   storeCategoryValidate,
 } from "../../api/store/store.validate.js";
-import { filterTypes } from "../multer.js";
+import { imageFilterTypes } from "../multer.js";
 import mongoose from "mongoose";
 import { findStoreById } from "../../api/store/repositories/store.repo.js";
-import { BadRequest, FilterError } from "../../common/api-error.js";
+import { BadRequest } from "../../common/api-error.js";
 import { BAD_REQUEST } from "../../common/http-code.js";
 
 export const storeCategoryFilter = async (req, file, cb) => {
   const error = storeCategoryValidate.validate(req.body);
   if (error.length > 0) {
-    FilterError.cause = error[0].message;
-    return cb(FilterError);
+    return cb(new BadRequest(BAD_REQUEST.message, error[0].message));
   }
 
   if (await findStoreCategoryByName(req.body.name)) {
     return cb(new BadRequest(BAD_REQUEST.message, "DUPLICATED_NAME"));
   }
 
-  if (filterTypes(req, file)) {
+  if (imageFilterTypes(req, file)) {
     cb(null, true);
   } else {
     return cb(new BadRequest(BAD_REQUEST.message, "Only images are allowed"));
@@ -35,8 +35,7 @@ export const menuFilter = async (req, file, cb) => {
   const obj = JSON.parse(JSON.stringify(req.body));
   const error = menuValidate.validate(obj);
   if (error.length > 0) {
-    FilterError.cause = error[0].message;
-    return cb(FilterError);
+    return cb(new BadRequest(BAD_REQUEST.message, error[0].message));
   }
 
   const storeId = req.params.storeId;
@@ -62,10 +61,6 @@ export const menuFilter = async (req, file, cb) => {
     return cb(new BadRequest(BAD_REQUEST.message, "IMPROPER_CATEGORY_ID"));
   }
 
-  // for (let i in req.body.menu) {
-  //   req.body.menu[i].imgPath = paths[i];
-  // }
-
   const duplicate = [];
 
   menuCategory.menu.forEach((serverMenu) => {
@@ -79,7 +74,7 @@ export const menuFilter = async (req, file, cb) => {
     return cb(new BadRequest(BAD_REQUEST.message, "DUPLICATED_NAME"));
   }
 
-  if (filterTypes(req, file)) {
+  if (imageFilterTypes(req, file)) {
     cb(null, true);
   } else {
     return cb(new BadRequest(BAD_REQUEST.message, "File Error"));
@@ -89,8 +84,7 @@ export const menuFilter = async (req, file, cb) => {
 export const putStoreCategoryFilter = async (req, file, cb) => {
   const error = putStoreCategoryValidate.validate(req.body);
   if (error.length > 0) {
-    FilterError.cause = error[0].message;
-    return cb(FilterError);
+    return cb(new BadRequest(BAD_REQUEST.message, error[0].message));
   }
 
   const id = req.params.categoryId;
@@ -107,11 +101,15 @@ export const putStoreCategoryFilter = async (req, file, cb) => {
     return cb(new BadRequest(BAD_REQUEST.message, "IMPROPER_CATEGORY_ID"));
   }
 
-  if (categoryByName && categoryById[0]._id !== categoryByName._id) {
+  if (
+    categoryByName &&
+    JSON.stringify(categoryById._id) !== JSON.stringify(categoryByName._id)
+  ) {
     return cb(new BadRequest(BAD_REQUEST.message, "DUPLICATED_NAME"));
   }
+  req.multer["storeCategory"] = categoryById;
 
-  if (filterTypes(req, file)) {
+  if (imageFilterTypes(req, file)) {
     cb(null, true);
   } else {
     return cb(new BadRequest(BAD_REQUEST.message, "File Error"));
@@ -120,10 +118,9 @@ export const putStoreCategoryFilter = async (req, file, cb) => {
 
 export const putMenuFilter = async (req, file, cb) => {
   const obj = JSON.parse(JSON.stringify(req.body));
-  const error = menuValidate.validate(obj);
+  const error = putMenuValidate.validate(obj);
   if (error.length > 0) {
-    FilterError.cause = error[0].message;
-    return cb(FilterError);
+    return cb(new BadRequest(BAD_REQUEST.message, error[0].message));
   }
   const categoryId = req.params.categoryId;
   const storeId = req.params.storeId;
@@ -148,18 +145,18 @@ export const putMenuFilter = async (req, file, cb) => {
   if (!store) {
     return cb(new BadRequest(BAD_REQUEST.message, "IMPROPER_STORE_ID"));
   }
-  const menuCategoryById = store.menuCategory.filter(
+  const menuCategory = store.menuCategory.filter(
     (category) => category._id.toString() === categoryId
   )[0];
 
-  if (!menuCategoryById) {
+  if (!menuCategory) {
     return cb(new BadRequest(BAD_REQUEST.message, "IMPROPER_CATEGORY_ID"));
   }
-  const menuById = menuCategoryById.menu.filter(
+  const menuById = menuCategory.menu.filter(
     (category) => category._id.toString() === menuId
   )[0];
-  const menuByName = menuCategoryById.menu.filter((category) => {
-    return category.name === req.body.menu[0].name;
+  const menuByName = menuCategory.menu.filter((category) => {
+    return category.name === req.body.menu.name;
   });
 
   if (!menuById) {
@@ -169,8 +166,9 @@ export const putMenuFilter = async (req, file, cb) => {
   if (menuByName.length > 0 && menuById._id !== menuByName._id) {
     return cb(new BadRequest(BAD_REQUEST.message, "DUPLICATED_NAME"));
   }
+  req.multer["menuCategory"] = menuCategory;
 
-  if (filterTypes(req, file)) {
+  if (imageFilterTypes(req, file)) {
     cb(null, true);
   } else {
     return cb(new BadRequest(BAD_REQUEST.message, "File Error"));

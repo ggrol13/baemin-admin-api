@@ -2,3 +2,4 @@ node_modules
 package-lock.json
 .env
 .idea
+s3.json

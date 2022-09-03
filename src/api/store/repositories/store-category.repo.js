@@ -6,9 +6,9 @@ export const saveStoreCategory = async (storeCategory) => {
   await model.save();
 };
 
-export const saveCategoryIdStore = async (storeid, storeCategoryId) => {
+export const saveCategoryIdStore = async (storeId, storeCategoryId) => {
   await storeSchema.findOneAndUpdate(
-    { _id: storeid },
+    { _id: storeId },
     { storeCategoryId },
     { strict: false }
   );
@@ -40,30 +40,23 @@ export const aggregateStoreCategoryById = async (id) => {
     .exec();
 };
 
-export const findStoreCategoryById = async (storeId) => {
-  return await storeCategorySchema.findOne({ _id: storeId }).exec();
+export const findStoreCategoryById = async (id) => {
+  return await storeCategorySchema.findOne({ _id: id }).exec();
 };
 
 export const findStoreCategoryByName = async (name) => {
   return await storeCategorySchema.findOne({ name }).exec();
 };
 
-export const editStoreCategory = async (name, file, id) => {
-  if (!file) {
-    await storeCategorySchema.findOneAndUpdate({ _id: id }, { $set: { name } });
-  } else if (!name) {
-    const path = file.path;
-    await storeCategorySchema.findOneAndUpdate(
-      { _id: id },
-      { $set: { imgPath: path } }
-    );
-  } else {
-    const path = file.path;
-    await storeCategorySchema.findOneAndUpdate(
-      { _id: id },
-      { $set: { name, imgPath: path } }
-    );
-  }
+export const editStoreCategory = async (categoryBody, id) => {
+  await storeCategorySchema
+    .findOneAndUpdate(
+      {
+        _id: id,
+      },
+      { $set: categoryBody }
+    )
+    .exec();
 };
 
 export const eraseStoreCategory = async (id) => {

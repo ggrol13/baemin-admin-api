@@ -14,15 +14,26 @@ import {
 } from "./repositories/store.repo.js";
 import mongoose from "mongoose";
 import {
-  aggregateStoreCategoryById,
   editStoreCategory,
   eraseStoreCategory,
   findStoreCategoryById,
-  saveCategoryIdStore,
   saveStoreCategory,
   saveStoreIdCategory,
 } from "./repositories/store-category.repo.js";
+import {
+  deleteMenuImage,
+  deletePutMenuImage,
+  deleteStoreCategoryImage,
+  uploadCategoryStore,
+  uploadMenuStore,
+  uploadPutMenuStore,
+  uploadPutStoreCategory,
+} from "../../middleware/multer.js";
+import { updateField } from "../../common/update-field.js";
+import { v4 as uuidv4 } from "uuid";
+import path from "path";
 
+//Store
 export const createStore = async (body) => {
   const validateCategoryId = mongoose.Types.ObjectId.isValid(
     body.storeCategoryId
@@ -41,50 +52,9 @@ export const createStore = async (body) => {
   }
   const store = await saveStore(body);
 
-  await saveCategoryIdStore(store._id, storeCategoryId);
+  // await saveCategoryIdStore(store._id, storeCategoryId);
   await saveStoreIdCategory(store._id, storeCategoryId);
   await saveMenuCategory(store._id, true, "대표 메뉴");
-  return { status: true, message: "SUCCESS" };
-};
-
-export const createMenu = async (body, categoryId, storeId, paths) => {
-  const store = await findStoreById(storeId);
-  const menuCategory = store.menuCategory.filter(
-    (category) => category._id.toString() === categoryId
-  )[0];
-
-  for (let i in body.menu) {
-    body.menu[i].imgPath = paths[i];
-  }
-
-  await saveMenu(storeId, body.menu, menuCategory.name);
-  return { status: true, message: "SUCCESS" };
-};
-
-export const createMenuCategory = async (body, id) => {
-  //storeId요청시 store가 있는 지 없는지 확인
-  const validateStoreId = mongoose.Types.ObjectId.isValid(id);
-  if (!validateStoreId) {
-    return { status: false, message: "INVALID_STORE_ID" };
-  }
-
-  const storeById = await findStoreById(id);
-  if (!storeById) {
-    return { status: false, message: "IMPROPER_STORE_ID" };
-  }
-
-  const menuCategory = await findMenuCategoryByName(body.name, id);
-  if (menuCategory) {
-    return { status: false, message: "DUPLICATED_NAME" };
-  }
-
-  await saveMenuCategory(id, false, body.name);
-  return { status: true, message: "SUCCESS" };
-}; //메뉴 카테고리 중복이름 걸러내기
-
-export const createStoreCategory = async (body, path) => {
-  body.imgPath = path;
-  await saveStoreCategory(body);
   return { status: true, message: "SUCCESS" };
 };
 
@@ -99,6 +69,73 @@ export const findStore = async (id) => {
     return { status: false, message: "IMPROPER_STORE_CATEGORY_ID" };
   }
   return { status: true, message: "SUCCESS", body: store };
+};
+
+export const updateStore = async (body, storeId) => {
+  const validateCategoryId = mongoose.Types.ObjectId.isValid(
+    body.storeCategoryId
+  );
+  const validateStoreId = mongoose.Types.ObjectId.isValid(storeId);
+  if (!validateCategoryId) {
+    return { status: false, message: "INVALID_CATEGORY_ID" };
+  }
+  if (!validateStoreId) {
+    return { status: false, message: "INVALID_CATEGORY_ID" };
+  }
+  const storeCategoryId = mongoose.Types.ObjectId(body.storeCategoryId);
+  let store = await findStoreById(storeId);
+  const findCategoryId = await findStoreCategoryById(storeCategoryId);
+  if (!findCategoryId) {
+    return { status: false, message: "IMPROPER_CATEGORY_ID" };
+  }
+  if (!store) {
+    return { status: false, message: "IMPROPER_STORE_ID" };
+  }
+  store = JSON.parse(JSON.stringify(store));
+  let storeBody = { ...body };
+  updateField(storeBody, store);
+
+  await editStore(storeBody, storeId);
+  return { status: true, message: "SUCCESS" };
+};
+
+export const removeStore = async (storeId) => {
+  const validateStoreId = mongoose.Types.ObjectId.isValid(storeId);
+  if (!validateStoreId) {
+    return { status: false, message: "INVALID_STORE_ID" };
+  }
+  const store = await findStoreById(storeId);
+  if (!store) {
+    return { status: false, message: "IMPROPER_STORE_ID" };
+  }
+  for (const category of store.menuCategory) {
+    for (const menu of category.menu) {
+      await deleteMenuImage(menu);
+    }
+  }
+  await eraseStore(storeId);
+  return { status: true, message: "SUCCESS", deleted: store };
+};
+
+//Menu
+export const createMenu = async (body, categoryId, storeId, files) => {
+  const store = await findStoreById(storeId);
+  const menuCategory = store.menuCategory.filter(
+    (category) => category._id.toString() === categoryId
+  )[0];
+  const menuBody = { ...body };
+  const imageName = files.map(
+    (file) => `${uuidv4()}${path.extname(file.originalname)}`
+  );
+  const paths = imageName.map((name) => process.env.MENU_IMG_URL + name);
+
+  for (let i in body.menu) {
+    menuBody.menu[i].imgPath = paths[i];
+  }
+  await uploadMenuStore(imageName, files);
+  await saveMenu(storeId, menuBody.menu, menuCategory.name);
+
+  return { status: true, message: "SUCCESS" };
 };
 
 export const findMenu = async (storeId, categoryId, menuId) => {
@@ -136,179 +173,40 @@ export const findMenu = async (storeId, categoryId, menuId) => {
   return { status: true, message: "SUCCESS", body: menu };
 };
 
-export const findMenuCategory = async (storeId, categoryId) => {
-  const validateStoreId = mongoose.Types.ObjectId.isValid(storeId);
-  const validateCategoryId = mongoose.Types.ObjectId.isValid(categoryId);
-
-  if (!validateStoreId) {
-    return { status: false, message: "INVALID_STORE_ID" };
-  }
-  if (!validateCategoryId) {
-    return { status: false, message: "INVALID_CATEGORY_ID" };
-  }
-
-  const storeOId = mongoose.Types.ObjectId(storeId);
-  const store = await findStoreById(storeOId);
-  const menuCategory = store.menuCategory.filter(
-    (category) => category._id.toString() === categoryId
+export const updateMenu = async (
+  body,
+  categoryId,
+  storeId,
+  menuId,
+  file,
+  menuCategory
+) => {
+  let menu = menuCategory.menu.filter(
+    (category) => category._id.toString() === menuId
   )[0];
-  if (!menuCategory) {
-    return { status: false, message: "IMPROPER_CATEGORY_ID" };
-  }
-  if (!store) {
-    return { status: false, message: "IMPROPER_STORE_ID" };
-  }
-  return { status: true, message: "SUCCESS", body: menuCategory };
-};
+  menu = JSON.parse(JSON.stringify(menu));
+  let menuBody = { ...body };
 
-export const findStoreCategory = async (id) => {
-  const validateCategoryId = mongoose.Types.ObjectId.isValid(id);
-  const storeCategoryId = mongoose.Types.ObjectId(id); //String을 ObjecId로 바꿈
-  if (!validateCategoryId) {
-    return { status: false, message: "INVALID_CATEGORY_ID" };
-  }
-  const category = await findStoreCategoryById(storeCategoryId);
-  if (!category) {
-    return { status: false, message: "IMPROPER_STORE_CATEGORY_ID" };
-  }
-  return { status: true, message: "SUCCESS", body: category };
-};
-
-export const updateStore = async (body, storeId) => {
-  const validateCategoryId = mongoose.Types.ObjectId.isValid(
-    body.storeCategoryId
-  );
-  const validateStoreId = mongoose.Types.ObjectId.isValid(storeId);
-  if (!validateCategoryId) {
-    return { status: false, message: "INVALID_CATEGORY_ID" };
-  }
-  if (!validateStoreId) {
-    return { status: false, message: "INVALID_CATEGORY_ID" };
-  }
-  const storeCategoryId = mongoose.Types.ObjectId(body.storeCategoryId);
-  const storeOId = mongoose.Types.ObjectId(storeId);
-  const findStoreId = await findStoreById(storeOId);
-  const findCategoryId = await findStoreCategoryById(storeCategoryId);
-  if (!findCategoryId) {
-    return { status: false, message: "IMPROPER_CATEGORY_ID" };
-  }
-  if (!findStoreId) {
-    return { status: false, message: "IMPROPER_STORE_ID" };
-  }
-
-  await editStore(body, storeOId);
-  return { status: true, message: "SUCCESS" };
-};
-
-export const updateMenu = async (body, categoryId, storeId, menuId, file) => {
-  if (!file) {
-    const validateCategoryId = mongoose.Types.ObjectId.isValid(categoryId);
-    const validateStoreId = mongoose.Types.ObjectId.isValid(storeId);
-    const validateMenuId = mongoose.Types.ObjectId.isValid(menuId);
-
-    if (!validateCategoryId) {
-      return { status: false, message: "INVALID_CATEGORY_ID" };
-    }
-    if (!validateStoreId) {
-      return { status: false, message: "INVALID_STORE_ID" };
-    }
-    if (!validateMenuId) {
-      return { status: false, message: "INVALID_MENU_ID" };
-    }
-  }
-
-  const storeOId = mongoose.Types.ObjectId(storeId);
-  const store = await findStoreById(storeOId);
-  if (!file) {
-    if (!store) {
-      return { status: false, message: "IMPROPER_STORE_ID" };
-    }
-  }
-  const menuCategory = store.menuCategory.filter(
-    (category) => category._id.toString() === categoryId
-  )[0];
-  if (!file) {
-    if (!menuCategory) {
-      return { status: false, message: "IMPROPER_CATEGORY_ID" };
-    }
-    const menu = menuCategory.menu.filter(
-      (category) => category._id.toString() === menuId
-    )[0];
-    if (!menu) {
-      return { status: false, message: "IMPROPER_MENU_ID" };
-    }
-  }
+  updateField(menuBody, menu);
 
   if (file) {
-    file.path = process.env.MENU_IMG_URL + file.filename;
-    body.menu[0].imgPath = file.path;
+    const imageName = `${uuidv4()}${path.extname(file.originalname)}`;
+    const imgPath = process.env.MENU_IMG_URL + imageName;
+    menuBody.menu.imgPath = imgPath;
+    await deletePutMenuImage(imgPath);
+    await uploadPutMenuStore(imageName, file);
+  }
+  menuCategory = JSON.parse(JSON.stringify(menuCategory));
+  for (const i in menuCategory.menu) {
+    if (menuCategory.menu[i]._id === menuId) {
+      menuCategory.menu[i] = JSON.parse(JSON.stringify(menuBody.menu));
+    }
   }
 
-  await editMenu(body.menu, storeOId, menuCategory.name, menuId);
+  await editMenu(menuCategory.menu, storeId, menuCategory.name);
 
   return { status: true, message: "SUCCESS" };
 };
-
-export const updateMenuCategory = async (body, storeId, categoryId) => {
-  //storeId요청시 store가 있는 지 없는지 확인
-  const validateCategoryId = mongoose.Types.ObjectId.isValid(categoryId);
-  const validateStoreId = mongoose.Types.ObjectId.isValid(storeId);
-  if (!validateCategoryId) {
-    return { status: false, message: "INVALID_CATEGORY_ID" };
-  }
-  if (!validateStoreId) {
-    return { status: false, message: "INVALID_STORE_ID" };
-  }
-  const store = await findStoreById(storeId);
-  if (!store) {
-    return { status: false, message: "IMPROPER_STORE_ID" };
-  }
-  const menuCategory = store.menuCategory.filter(
-    (category) => category._id.toString() === categoryId
-  )[0];
-  if (!menuCategory) {
-    return { status: false, message: "IMPROPER_CATEGORY_ID" };
-  }
-
-  await editMenuCategory(storeId, categoryId, body);
-  return { status: true, message: "SUCCESS" };
-};
-
-export const updateStoreCategory = async (body, file, id) => {
-  if (!file) {
-    const validateCategoryId = mongoose.Types.ObjectId.isValid(id);
-    if (!validateCategoryId) {
-      return { status: false, message: "INVALID_CATEGORY_ID" };
-    }
-  }
-  const storeCategoryId = mongoose.Types.ObjectId(id);
-
-  const category = await aggregateStoreCategoryById(storeCategoryId);
-  if (!file) {
-    if (!category) {
-      return { status: false, message: "IMPROPER_STORE_CATEGORY_ID" };
-    }
-  }
-  file.path = process.env.STORE_CATEGORY_IMG_URL + file.filename;
-
-  //after or before update should delete existed image
-  await editStoreCategory(body.name, file, storeCategoryId);
-  return { status: true, message: "SUCCESS", body: category };
-};
-
-export const removeStore = async (storeId) => {
-  const validateStoreId = mongoose.Types.ObjectId.isValid(storeId);
-  if (!validateStoreId) {
-    return { status: false, message: "INVALID_STORE_ID" };
-  }
-  const store = await findStoreById(storeId);
-  if (!store) {
-    return { status: false, message: "IMPROPER_STORE_ID" };
-  }
-  await eraseStore(storeId);
-  return { status: true, message: "SUCCESS", deleted: store };
-};
-
 export const removeMenu = async (storeId, categoryId, menuId) => {
   const validateStoreId = mongoose.Types.ObjectId.isValid(storeId);
   const validateCategoryId = mongoose.Types.ObjectId.isValid(categoryId);
@@ -341,8 +239,85 @@ export const removeMenu = async (storeId, categoryId, menuId) => {
   if (!menu) {
     return { status: false, message: "IMPROPER_MENU_ID" };
   }
+  await deleteMenuImage(menu);
   await eraseMenu(storeOId, menuCategory.name, menuId, menu.name);
   return { status: true, message: "SUCCESS", deleted: menu };
+};
+
+//menuCategory
+
+export const createMenuCategory = async (body, id) => {
+  //storeId요청시 store가 있는 지 없는지 확인
+  const validateStoreId = mongoose.Types.ObjectId.isValid(id);
+  if (!validateStoreId) {
+    return { status: false, message: "INVALID_STORE_ID" };
+  }
+
+  const storeById = await findStoreById(id);
+  if (!storeById) {
+    return { status: false, message: "IMPROPER_STORE_ID" };
+  }
+
+  const menuCategory = await findMenuCategoryByName(body.name, id);
+  if (menuCategory) {
+    return { status: false, message: "DUPLICATED_NAME" };
+  }
+
+  await saveMenuCategory(id, false, body.name);
+  return { status: true, message: "SUCCESS" };
+}; //메뉴 카테고리 중복이름 걸러내기
+
+export const findMenuCategory = async (storeId, categoryId) => {
+  const validateStoreId = mongoose.Types.ObjectId.isValid(storeId);
+  const validateCategoryId = mongoose.Types.ObjectId.isValid(categoryId);
+
+  if (!validateStoreId) {
+    return { status: false, message: "INVALID_STORE_ID" };
+  }
+  if (!validateCategoryId) {
+    return { status: false, message: "INVALID_CATEGORY_ID" };
+  }
+
+  const storeOId = mongoose.Types.ObjectId(storeId);
+  const store = await findStoreById(storeOId);
+  const menuCategory = store.menuCategory.filter(
+    (category) => category._id.toString() === categoryId
+  )[0];
+  if (!menuCategory) {
+    return { status: false, message: "IMPROPER_CATEGORY_ID" };
+  }
+  if (!store) {
+    return { status: false, message: "IMPROPER_STORE_ID" };
+  }
+  return { status: true, message: "SUCCESS", body: menuCategory };
+};
+
+export const updateMenuCategory = async (body, storeId, categoryId) => {
+  //storeId요청시 store가 있는 지 없는지 확인
+  const validateCategoryId = mongoose.Types.ObjectId.isValid(categoryId);
+  const validateStoreId = mongoose.Types.ObjectId.isValid(storeId);
+  if (!validateCategoryId) {
+    return { status: false, message: "INVALID_CATEGORY_ID" };
+  }
+  if (!validateStoreId) {
+    return { status: false, message: "INVALID_STORE_ID" };
+  }
+  const store = await findStoreById(storeId);
+  if (!store) {
+    return { status: false, message: "IMPROPER_STORE_ID" };
+  }
+  let menuCategory = store.menuCategory.filter(
+    (category) => category._id.toString() === categoryId
+  )[0];
+  if (!menuCategory) {
+    return { status: false, message: "IMPROPER_CATEGORY_ID" };
+  }
+  menuCategory = JSON.parse(JSON.stringify(menuCategory));
+  let categoryBody = { ...body };
+  updateField(categoryBody, menuCategory);
+
+  await editMenuCategory(storeId, categoryId, categoryBody);
+  return { status: true, message: "SUCCESS" };
 };
 
 export const removeMenuCategory = async (storeId, categoryId) => {
@@ -366,12 +341,56 @@ export const removeMenuCategory = async (storeId, categoryId) => {
   if (!menuCategory) {
     return { status: false, message: "IMPROPER_CATEGORY_ID" };
   }
+  for (const menu of menuCategory.menu) {
+    await deleteMenuImage(menu);
+  }
   await eraseMenuCategory(storeId, menuCategory._id);
   return { status: true, message: "SUCCESS", deleted: menuCategory };
 };
 
+//storeCategory
+
+export const createStoreCategory = async (body, file) => {
+  const imageName = `${uuidv4()}${path.extname(file.originalname)}`;
+  const imgPath = process.env.STORE_CATEGORY_IMG_URL + imageName;
+  const category = { ...body, imgPath: imgPath };
+  await saveStoreCategory(category);
+  await uploadCategoryStore(imageName, file);
+  return { status: true, message: "SUCCESS" };
+};
+
+export const findStoreCategory = async (id) => {
+  const validateCategoryId = mongoose.Types.ObjectId.isValid(id);
+  const storeCategoryId = mongoose.Types.ObjectId(id); //String을 ObjecId로 바꿈
+  if (!validateCategoryId) {
+    return { status: false, message: "INVALID_CATEGORY_ID" };
+  }
+  const category = await findStoreCategoryById(storeCategoryId);
+  if (!category) {
+    return { status: false, message: "IMPROPER_STORE_CATEGORY_ID" };
+  }
+  return { status: true, message: "SUCCESS", body: category };
+};
+
+export const updateStoreCategory = async (body, file, id, category) => {
+  category = JSON.parse(JSON.stringify(category));
+  let editCategory = { ...body };
+  if (file) {
+    let imageName = `${uuidv4()}${path.extname(file.originalname)}`;
+    editCategory.imgPath =
+      process.env.SHOPPING_LIVE_CATEGORY_IMG_URL + imageName;
+
+    await deleteStoreCategoryImage(category);
+    await uploadCategoryStore(imageName, file);
+  }
+  updateField(editCategory, category);
+  await editStoreCategory(editCategory, id);
+  return { status: true, message: "SUCCESS", body: category };
+};
+
 export const removeStoreCategory = async (categoryId) => {
   const validateCategoryId = mongoose.Types.ObjectId.isValid(categoryId);
+
   if (!validateCategoryId) {
     return { status: false, message: "INVALID_CATEGORY_ID" };
   }
@@ -379,6 +398,8 @@ export const removeStoreCategory = async (categoryId) => {
   if (!storeCategory) {
     return { status: false, message: "IMPROPER_CATEGORY_ID" };
   }
+  await deleteStoreCategoryImage(storeCategory);
+
   await eraseStoreCategory(categoryId);
   return { status: true, message: "SUCCESS", deleted: storeCategory };
 };

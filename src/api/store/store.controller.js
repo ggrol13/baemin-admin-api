@@ -19,12 +19,17 @@ import {
 import {
   menuCategoryValidate,
   menuValidate,
+  putMenuCategoryValidate,
+  putStoreValidate,
+  putValidateMenu,
+  putValidateStoreCategory,
   storeCategoryValidate,
   storeValidate,
 } from "./store.validate.js";
 import { BAD_REQUEST } from "../../common/http-code.js";
 import { ApiError } from "../../common/api-error.js";
 import { ApiSuccess } from "../../common/api-response.js";
+import { putLiveCategoryValidate } from "../shopping-live/shopping-live.validate.js";
 
 export const insertStore = async (req, res) => {
   const error = storeValidate.validate(req.body);
@@ -47,21 +52,13 @@ export const insertMenu = async (req, res) => {
     await ApiError(BAD_REQUEST, res, "No_File");
     return;
   }
-  const paths = req.files.map(
-    (file) => process.env.MENU_IMG_URL + file.filename
-  );
-  console.log(paths);
+
   const returnValues = await createMenu(
     req.body,
     req.params.categoryId,
     req.params.storeId,
-    paths
+    req.files
   );
-
-  if (!returnValues.status) {
-    await ApiError(BAD_REQUEST, res, returnValues.message);
-    return;
-  }
 
   await ApiSuccess(returnValues, req.body, res);
 };
@@ -88,13 +85,8 @@ export const insertStoreCategory = async (req, res) => {
     await ApiError(BAD_REQUEST, res, "No_File");
     return;
   }
-  req.file.path = process.env.STORE_CATEGORY_IMG_URL + req.file.filename;
-  const returnValues = await createStoreCategory(req.body, req.file.path);
+  const returnValues = await createStoreCategory(req.body, req.file);
 
-  if (!returnValues.status) {
-    await ApiError(BAD_REQUEST, res, returnValues.message);
-    return;
-  }
   await ApiSuccess(returnValues, req.body, res);
 };
 export const getStore = async (req, res) => {
@@ -145,7 +137,7 @@ export const getStoreCategory = async (req, res) => {
 };
 
 export const putStore = async (req, res) => {
-  const error = storeValidate.validate(req.body);
+  const error = putStoreValidate.validate(req.body);
   if (error.length > 0) {
     await ApiError(BAD_REQUEST, res, error[0].message);
     return;
@@ -161,13 +153,14 @@ export const putStore = async (req, res) => {
 };
 
 export const putMenu = async (req, res) => {
+  let menuCategory;
   if (!req.file) {
-    const obj = JSON.parse(JSON.stringify(req.body));
-    const error = menuValidate.validate(obj);
-    if (error.length > 0) {
-      await ApiError(BAD_REQUEST, res, error[0].message);
+    menuCategory = await putValidateMenu(req, res);
+    if (!menuCategory) {
       return;
     }
+  } else {
+    menuCategory = req.multer.menuCategory;
   }
 
   const returnValues = await updateMenu(
@@ -175,7 +168,8 @@ export const putMenu = async (req, res) => {
     req.params.categoryId,
     req.params.storeId,
     req.params.menuId,
-    req.file
+    req.file,
+    menuCategory
   );
 
   if (!returnValues.status) {
@@ -187,7 +181,7 @@ export const putMenu = async (req, res) => {
 };
 
 export const putMenuCategory = async (req, res) => {
-  const error = menuCategoryValidate.validate(req.body);
+  const error = putMenuCategoryValidate.validate(req.body);
   if (error.length > 0) {
     await ApiError(BAD_REQUEST, res, error[0].message);
     return;
@@ -208,18 +202,21 @@ export const putMenuCategory = async (req, res) => {
 };
 
 export const putStoreCategory = async (req, res) => {
+  let category;
   if (!req.file) {
-    const error = storeCategoryValidate.validate(req.body);
-    if (error.length > 0) {
-      await ApiError(BAD_REQUEST, res, error[0].message);
+    category = await putValidateStoreCategory(req, res);
+    if (!category) {
       return;
     }
+  } else {
+    category = req.multer.storeCategory;
   }
 
   const returnValues = await updateStoreCategory(
     req.body,
     req.file,
-    req.params.categoryId
+    req.params.categoryId,
+    category
   );
 
   if (!returnValues.status) {
@@ -267,11 +264,10 @@ export const deleteMenuCategory = async (req, res) => {
 };
 
 export const deleteStoreCategory = async (req, res) => {
-  const returnValues = await removeStoreCategory(req.params.storeCategoryId);
+  const returnValues = await removeStoreCategory(req.params.categoryId);
   if (!returnValues.status) {
     await ApiError(BAD_REQUEST, res, returnValues.message);
     return;
   }
-
   await ApiSuccess(returnValues, returnValues.deleted, res);
 };

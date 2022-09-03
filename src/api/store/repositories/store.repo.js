@@ -12,10 +12,10 @@ export const saveMenuCategory = async (storeId, isRepresent, name) => {
   );
 };
 
-export const saveMenu = async (storeId, body, name) => {
+export const saveMenu = async (storeId, menu, name) => {
   await storeSchema.updateOne(
     { _id: storeId },
-    { $push: { "menuCategory.$[a].menu": body } },
+    { $push: { "menuCategory.$[a].menu": menu } },
     { arrayFilters: [{ "a.name": name }] }
   );
 };
@@ -38,31 +38,20 @@ export const findMenuCategoryByName = async (name, id) => {
   }
 };
 
-// export const findMenuCategoryById = async (categoryId, storeId) => {
-//   try {
-//     return await storeSchema
-//       .findOne({
-//         _id: storeId,
-//         menuCategory: { $elemMatch: { _id: categoryId } },
-//       }) //projection빼고 filter에 name추가
-//       .exec();
-//   } catch (e) {
-//     console.log(e);
-//   }
-// };
-
-export const editStore = async (body, id) => {
-  await storeSchema.findOneAndUpdate({ _id: id }, { $set: body });
+export const editStore = async (storeBody, id) => {
+  await storeSchema.findOneAndUpdate({ _id: id }, { $set: storeBody });
 };
 
-export const editMenu = async (menu, storeId, name, menuId) => {
-  await storeSchema.findOneAndUpdate(
-    { _id: storeId },
-    { $set: { "menuCategory.$[a].menu.$[b]": menu } },
-    {
-      arrayFilters: [{ "a.name": name }, { "b._id": menuId }],
-    }
-  );
+export const editMenu = async (menuBody, id, name) => {
+  await storeSchema
+    .findOneAndUpdate(
+      {
+        _id: id,
+      },
+      { $set: { "menuCategory.$[a].menu": menuBody } },
+      { arrayFilters: [{ "a.name": name }] }
+    )
+    .exec();
 };
 
 export const editMenuCategory = async (storeId, categoryId, body) => {

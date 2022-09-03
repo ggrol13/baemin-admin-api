@@ -61,7 +61,7 @@ export const storeRouter = () => {
   router.put("/menuCategory/:storeId/:menuCategoryId", putMenuCategory);
 
   router.delete("/:storeId", deleteStore);
-  router.delete("/storeCategory/:storeCategoryId", deleteStoreCategory);
+  router.delete("/storeCategory/:categoryId", deleteStoreCategory);
   router.delete("/menuCategory/:storeId/:menuCategoryId", deleteMenuCategory);
   router.delete("/menu/:storeId/:categoryId/:menuId", deleteMenu);
 
