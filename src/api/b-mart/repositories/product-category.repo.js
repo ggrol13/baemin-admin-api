@@ -1,5 +1,4 @@
 import { bMartCategorySchema } from "../schemas/product-category.schema.js";
-import { storeCategorySchema } from "../../store/schemas/store-category.schema.js";
 
 export const saveBMartCategory = async (category) => {
   const model = new bMartCategorySchema(category);
@@ -22,6 +21,15 @@ export const saveBMartProductId = async (productId, categoryId) => {
   await bMartCategorySchema.updateOne(
     { _id: categoryId },
     { $push: { productId: [productId] } }
+  );
+};
+
+export const deleteBMartProductId = async (productId, categoryId) => {
+  await bMartCategorySchema.updateOne(
+    {
+      _id: categoryId,
+    },
+    { $pull: { productId: { $in: [productId] } } }
   );
 };
 

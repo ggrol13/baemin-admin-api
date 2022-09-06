@@ -3,18 +3,33 @@ import { BAD_REQUEST } from "../../common/http-code.js";
 import { ApiSuccess } from "../../common/api-response.js";
 import {
   createBMartCategory,
+  createBMartEvent,
   createBMartProduct,
+  createBMartSaleProduct,
+  examineBMartProductTrue,
   findBMartCategory,
+  findBMartEvent,
   findBMartProduct,
   findBMartProductsFromCategory,
+  findBMartSaleProduct,
   removeBMartCategory,
+  removeBMartEvent,
   removeBMartProduct,
+  removeBMartProductFromEvent,
+  removeBMartSaleProduct,
   updateBMartCategory,
+  updateBMartEvent,
   updateBMartProduct,
+  updateBMartSaleProduct,
 } from "./b-mart.service.js";
 import {
+  bMartEventValidate,
+  bMartSaleValidate,
+  examineBMartProductValidate,
   putBMartCategoryValidate,
+  putBMartEventValidate,
   putBMartProductValidate,
+  putBMartSaleValidate,
 } from "./b-mart.validation.js";
 
 //bMartProduct
@@ -120,6 +135,131 @@ export const getBMartProductsFromCategory = async (req, res) => {
     req.params.bMartCategoryId
   );
 
+  if (!returnValues.status) {
+    await ApiError(BAD_REQUEST, res, returnValues.message);
+    return;
+  }
+  await ApiSuccess(returnValues, returnValues.body, res);
+};
+
+//productExamine
+export const examineBMartProduct = async (req, res) => {
+  const error = examineBMartProductValidate.validate(req.body);
+  if (error.length > 0) {
+    await ApiError(BAD_REQUEST, res, error[0].message);
+    return;
+  }
+
+  const returnValues = await examineBMartProductTrue(
+    req.params.productId,
+    req.body
+  );
+  if (!returnValues.status) {
+    await ApiError(BAD_REQUEST, res, returnValues.message);
+    return;
+  }
+  await ApiSuccess(returnValues, returnValues.body, res);
+};
+
+//event
+export const insertBMartEvent = async (req, res) => {
+  const error = bMartEventValidate.validate(req.body);
+  if (error.length > 0) {
+    await ApiError(BAD_REQUEST, res, error[0].message);
+    return;
+  }
+
+  const returnValues = await createBMartEvent(req.body);
+  if (!returnValues.status) {
+    await ApiError(BAD_REQUEST, res, returnValues.message);
+    return;
+  }
+  await ApiSuccess(returnValues, returnValues.body, res);
+};
+
+export const getBMartEvent = async (req, res) => {
+  const returnValues = await findBMartEvent(req.params.eventId);
+  if (!returnValues.status) {
+    await ApiError(BAD_REQUEST, res, returnValues.message);
+    return;
+  }
+  await ApiSuccess(returnValues, returnValues.body, res);
+};
+
+export const deleteBMartEvent = async (req, res) => {
+  const returnValues = await removeBMartEvent(req.params.eventId);
+  if (!returnValues.status) {
+    await ApiError(BAD_REQUEST, res, returnValues.message);
+    return;
+  }
+  await ApiSuccess(returnValues, returnValues.body, res);
+};
+
+export const putBMartEvent = async (req, res) => {
+  const error = putBMartEventValidate.validate(req.body);
+  if (error.length > 0) {
+    await ApiError(BAD_REQUEST, res, error[0].message);
+    return;
+  }
+  const returnValues = await updateBMartEvent(req.body, req.params.eventId);
+  if (!returnValues.status) {
+    await ApiError(BAD_REQUEST, res, returnValues.message);
+    return;
+  }
+  await ApiSuccess(returnValues, returnValues.body, res);
+};
+
+export const deleteBMartProductFromEvent = async (req, res) => {
+  const returnValues = await removeBMartProductFromEvent(
+    req.params.eventId,
+    req.params.productId
+  );
+  if (!returnValues.status) {
+    await ApiError(BAD_REQUEST, res, returnValues.message);
+    return;
+  }
+  await ApiSuccess(returnValues, returnValues.body, res);
+};
+
+//sale
+export const insertBMartSaleProduct = async (req, res) => {
+  const error = bMartSaleValidate.validate(req.body);
+  if (error.length > 0) {
+    await ApiError(BAD_REQUEST, res, error[0].message);
+    return;
+  }
+  const returnValues = await createBMartSaleProduct(req.body);
+  if (!returnValues.status) {
+    await ApiError(BAD_REQUEST, res, returnValues.message);
+    return;
+  }
+  await ApiSuccess(returnValues, returnValues.body, res);
+};
+
+export const getBMartSaleProduct = async (req, res) => {
+  const returnValues = await findBMartSaleProduct();
+  await ApiSuccess(returnValues, returnValues.body, res);
+};
+export const deleteBMartSaleProduct = async (req, res) => {
+  const returnValues = await removeBMartSaleProduct(req.params.productId);
+  if (!returnValues.status) {
+    await ApiError(BAD_REQUEST, res, returnValues.message);
+    return;
+  }
+  await ApiSuccess(returnValues, returnValues.body, res);
+};
+
+export const putBMartSaleProduct = async (req, res) => {
+  const error = putBMartSaleValidate.validate(req.body);
+  if (error.length > 0) {
+    await ApiError(BAD_REQUEST, res, error[0].message);
+    return;
+  }
+
+  const returnValues = await updateBMartSaleProduct(
+    req.body,
+    req.params.productId
+  );
   if (!returnValues.status) {
     await ApiError(BAD_REQUEST, res, returnValues.message);
     return;

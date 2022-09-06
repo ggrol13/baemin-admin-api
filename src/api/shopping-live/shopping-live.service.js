@@ -37,15 +37,7 @@ import {
   saveLiveCalender,
 } from "./repositories/live-calander.repo.js";
 
-export const createShoppingLiveCategory = async (body, file) => {
-  const imageName = `${uuidv4()}${path.extname(file.originalname)}`;
-  const imgPath = process.env.SHOPPING_LIVE_CATEGORY_IMG_URL + imageName;
-  const category = { ...body, imgPath };
-  await saveShoppingLiveCategory(category);
-  await uploadLiveCategory(imageName, file);
-  return { status: true, message: "SUCCESS" };
-};
-
+//ShoppingLiveProduct
 export const createShoppingLiveProduct = async (body, files) => {
   const shoppingLiveCategoryId = mongoose.Types.ObjectId(
     body.shoppingLiveCategoryId
@@ -73,7 +65,6 @@ export const createShoppingLiveProduct = async (body, files) => {
   await saveLiveIdCategory(shoppingLive._id, shoppingLiveCategoryId);
   return { status: true, message: "SUCCESS" };
 };
-
 export const findShoppingLive = async (productId) => {
   const validateProductId = mongoose.Types.ObjectId.isValid(productId);
   if (!validateProductId) {
@@ -85,33 +76,6 @@ export const findShoppingLive = async (productId) => {
     return { status: false, message: "IMPROPER_LIVE_ID" };
   }
   return { status: true, message: "SUCCESS", body: product };
-};
-
-export const findShoppingLiveCategory = async (categoryId) => {
-  const validateCategoryId = mongoose.Types.ObjectId.isValid(categoryId);
-  if (!validateCategoryId) {
-    return { status: false, message: "INVALID_CATEGORY_ID" };
-  }
-  const category = await findShoppingLiveCategoryById(categoryId);
-  if (!category) {
-    return { status: false, message: "IMPROPER_CATEGORY_ID" };
-  }
-  return { status: true, message: "SUCCESS", body: category };
-};
-
-export const findProductFromCategory = async (categoryId) => {
-  const validateCategoryId = mongoose.Types.ObjectId.isValid(categoryId);
-  if (!validateCategoryId) {
-    return { status: false, message: "INVALID_CATEGORY_ID" };
-  }
-  const category = await findShoppingLiveCategoryById(categoryId);
-  if (!category) {
-    return { status: false, message: "IMPROPER_CATEGORY_ID" };
-  }
-  const id = mongoose.Types.ObjectId(categoryId);
-  const allLive = await getAllProduct(id);
-
-  return { status: true, message: "SUCCESS", body: allLive };
 };
 
 export const removeShoppingLive = async (liveId) => {
@@ -129,20 +93,6 @@ export const removeShoppingLive = async (liveId) => {
   await deleteLiveVideo(shoppingLive.videoPath);
   await eraseShoppingLive(liveId);
   return { status: true, message: "SUCCESS", deleted: shoppingLive };
-};
-
-export const removeShoppingLiveCategory = async (categoryId) => {
-  const validateCategoryId = mongoose.Types.ObjectId.isValid(categoryId);
-  if (!validateCategoryId) {
-    return { status: false, message: "INVALID_CATEGORY_ID" };
-  }
-  const category = await findShoppingLiveCategoryById(categoryId);
-  if (!category) {
-    return { status: false, message: "IMPROPER_CATEGORY_ID" };
-  }
-  await deleteLiveCategoryImage(category);
-  await eraseShoppingLiveCategory(categoryId);
-  return { status: true, message: "SUCCESS", deleted: category };
 };
 
 export const updateShoppingLive = async (body, files, liveId, shoppingLive) => {
@@ -182,6 +132,57 @@ export const updateShoppingLive = async (body, files, liveId, shoppingLive) => {
   return { status: true, message: "SUCCESS", body: shoppingLive };
 };
 
+//ShoppingLiveCategory
+export const createShoppingLiveCategory = async (body, file) => {
+  const imageName = `${uuidv4()}${path.extname(file.originalname)}`;
+  const imgPath = process.env.SHOPPING_LIVE_CATEGORY_IMG_URL + imageName;
+  const category = { ...body, imgPath };
+  await saveShoppingLiveCategory(category);
+  await uploadLiveCategory(imageName, file);
+  return { status: true, message: "SUCCESS" };
+};
+
+export const findShoppingLiveCategory = async (categoryId) => {
+  const validateCategoryId = mongoose.Types.ObjectId.isValid(categoryId);
+  if (!validateCategoryId) {
+    return { status: false, message: "INVALID_CATEGORY_ID" };
+  }
+  const category = await findShoppingLiveCategoryById(categoryId);
+  if (!category) {
+    return { status: false, message: "IMPROPER_CATEGORY_ID" };
+  }
+  return { status: true, message: "SUCCESS", body: category };
+};
+
+export const findProductFromCategory = async (categoryId) => {
+  const validateCategoryId = mongoose.Types.ObjectId.isValid(categoryId);
+  if (!validateCategoryId) {
+    return { status: false, message: "INVALID_CATEGORY_ID" };
+  }
+  const category = await findShoppingLiveCategoryById(categoryId);
+  if (!category) {
+    return { status: false, message: "IMPROPER_CATEGORY_ID" };
+  }
+  const id = mongoose.Types.ObjectId(categoryId);
+  const allLive = await getAllProduct(id);
+
+  return { status: true, message: "SUCCESS", body: allLive };
+};
+
+export const removeShoppingLiveCategory = async (categoryId) => {
+  const validateCategoryId = mongoose.Types.ObjectId.isValid(categoryId);
+  if (!validateCategoryId) {
+    return { status: false, message: "INVALID_CATEGORY_ID" };
+  }
+  const category = await findShoppingLiveCategoryById(categoryId);
+  if (!category) {
+    return { status: false, message: "IMPROPER_CATEGORY_ID" };
+  }
+  await deleteLiveCategoryImage(category);
+  await eraseShoppingLiveCategory(categoryId);
+  return { status: true, message: "SUCCESS", deleted: category };
+};
+
 export const updateShoppingLiveCategory = async (body, file, id, category) => {
   category = JSON.parse(JSON.stringify(category));
   let editCategory = { ...body };
@@ -198,6 +199,8 @@ export const updateShoppingLiveCategory = async (body, file, id, category) => {
   await editShoppingLiveCategory(editCategory, id);
   return { status: true, message: "SUCCESS", body: editCategory };
 };
+
+//categoryYN
 export const updateEncoreTrue = async (id) => {
   const validateShoppingId = mongoose.Types.ObjectId.isValid(id);
   if (!validateShoppingId) {
@@ -280,6 +283,7 @@ export const updateExamineYN = async (id) => {
   return { status: true, message: "SUCCESS", body: live };
 };
 
+//liveCalender
 export const createLiveCalender = async (body) => {
   let calenderDetail = { ...body };
   let calender = await findLiveCalender(new Date(calenderDetail.detail.date));

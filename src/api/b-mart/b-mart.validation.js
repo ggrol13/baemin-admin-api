@@ -3,9 +3,11 @@ import { BAD_REQUEST } from "../../common/http-code.js";
 import { findBMartCategoryById } from "./repositories/product-category.repo.js";
 import Schema from "validate";
 import mongoose from "mongoose";
-import { findProductById } from "./repositories/product.repo.js";
+import { findBMartProductById } from "./repositories/product.repo.js";
 
+//productValidate
 export const bMartProductValidate = new Schema({
+  examineYN: { required: true },
   name: { required: true },
   price: { required: true },
   imgPath: [{ required: true }],
@@ -54,7 +56,7 @@ export const putBMartProductValidate = async (req, res) => {
     return;
   }
 
-  const product = findProductById(req.params.productId);
+  const product = findBMartProductById(req.params.productId);
   if (!product) {
     ApiError(BAD_REQUEST, res, "IMPROPER_PRODUCT_ID");
     return;
@@ -62,6 +64,7 @@ export const putBMartProductValidate = async (req, res) => {
   return product;
 };
 
+//BMartCategoryValidate
 export const bMartCategoryValidate = new Schema({
   name: { required: true },
   productId: [{ required: false }],
@@ -94,3 +97,36 @@ export const putBMartCategoryValidate = async (req, res) => {
 
   return category;
 };
+
+//examineValidate
+export const examineBMartProductValidate = new Schema({
+  examineYN: { required: true },
+});
+
+//event
+export const bMartEventValidate = new Schema({
+  name: { required: true },
+  productId: [{ required: false }],
+});
+
+export const putBMartEventValidate = new Schema({
+  name: { required: false },
+  productId: [{ required: false }],
+});
+
+export const bMartProductInEventValidate = new Schema({
+  productId: [{ required: true }],
+});
+
+//sale
+export const bMartSaleValidate = new Schema({
+  productId: { required: true },
+  salePercent: { required: true },
+  startDate: { required: true },
+  endDate: { required: true },
+});
+
+export const putBMartSaleValidate = new Schema({
+  salePercent: { required: false },
+  endDate: { required: false },
+});

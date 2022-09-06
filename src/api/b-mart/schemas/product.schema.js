@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 
 const bMartProduct = new mongoose.Schema({
+  examineYN: Boolean,
   name: String,
   price: Number,
   imgPath: [{ path: String, imageName: String, number: Number }],

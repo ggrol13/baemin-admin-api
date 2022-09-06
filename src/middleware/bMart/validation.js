@@ -15,7 +15,7 @@ import {
 import mongoose from "mongoose";
 import {
   findBMartProductByName,
-  findProductById,
+  findBMartProductById,
 } from "../../api/b-mart/repositories/product.repo.js";
 
 export const bMartProductFilter = async (req, file, cb) => {
@@ -67,7 +67,7 @@ export const putBMartProductFilter = async (req, file, cb) => {
   if (!(await findBMartCategoryById(req.body.categoryId))) {
     return cb(new BadRequest(BAD_REQUEST.message, "IMPROPER_CATEGORY_ID"));
   }
-  const productById = await findProductById(id);
+  const productById = await findBMartProductById(id);
   const productByName = await findBMartProductByName(req.body.name);
   console.log(productById);
   if (

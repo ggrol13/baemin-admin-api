@@ -1,14 +1,24 @@
 import express from "express";
 import {
   deleteBMartCategory,
+  deleteBMartEvent,
   deleteBMartProduct,
+  deleteBMartProductFromEvent,
+  deleteBMartSaleProduct,
+  examineBMartProduct,
   getBMartCategory,
+  getBMartEvent,
   getBMartProduct,
   getBMartProductsFromCategory,
+  getBMartSaleProduct,
   insertBMartCategory,
+  insertBMartEvent,
   insertBMartProduct,
+  insertBMartSaleProduct,
   putBMartCategory,
+  putBMartEvent,
   putBMartProduct,
+  putBMartSaleProduct,
 } from "./b-mart.controller.js";
 import {
   putUploadMartProduct,
@@ -50,5 +60,24 @@ export const bMartRouter = () => {
     "/category/allProduct/:bMartCategoryId",
     getBMartProductsFromCategory
   );
+
+  //productExamine
+  router.put("/product/examine/:productId", examineBMartProduct);
+
+  //event
+  router.post("/event", insertBMartEvent);
+  router.get("/event/:eventId", getBMartEvent);
+  router.delete("/event/:eventId", deleteBMartEvent);
+  router.put("/event/:eventId", putBMartEvent);
+  router.delete(
+    "/event/product/:eventId/:productId",
+    deleteBMartProductFromEvent
+  );
+
+  //sale
+  router.post("/sale", insertBMartSaleProduct);
+  router.get("/sale", getBMartSaleProduct);
+  router.put("/sale/:productId", putBMartSaleProduct);
+  router.delete("/sale/:productId", deleteBMartSaleProduct);
   return router;
 };

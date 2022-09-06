@@ -1,4 +1,5 @@
 import {
+  deleteBMartProductId,
   editBMartCategory,
   eraseBMartCategory,
   findAllBMartProducts,
@@ -20,10 +21,29 @@ import { updateField } from "../../common/update-field.js";
 import {
   editBMartProduct,
   eraseBMartProduct,
-  findProductById,
+  findBMartProductAllExamined,
+  findBMartProductById,
   saveBMartProduct,
+  setBMartProductExamine,
 } from "./repositories/product.repo.js";
+import {
+  editBMartEvent,
+  eraseBMartEvent,
+  eraseBMartProductFromEvent,
+  findBMartEventAllProducts,
+  findBMartEventById,
+  findBMartEventByName,
+  saveBMartEvent,
+} from "./repositories/b-mart-event.repo.js";
+import {
+  editBMartSaleProduct,
+  eraseBMartSaleProduct,
+  findAllBMartSaleProducts,
+  findSaleProduct,
+  saveBMartSaleProduct,
+} from "./repositories/product-sale.repo.js";
 
+//bMartProduct
 export const createBMartProduct = async (body, files) => {
   const images = files.map((image) => {
     const name = uuidv4() + path.extname(image.originalname);
@@ -35,8 +55,7 @@ export const createBMartProduct = async (body, files) => {
   });
   const product = { ...body, imgPath: images };
   await uploadBMartProduct(images, files);
-  const productSaved = await saveBMartProduct(product);
-  await saveBMartProductId(productSaved._id, product.categoryId);
+  await saveBMartProduct(product);
   return { status: true, message: "SUCCESS" };
 };
 
@@ -45,7 +64,7 @@ export const findBMartProduct = async (id) => {
   if (!validateProductId) {
     return { status: false, message: "INVALID_PRODUCT_ID" };
   }
-  const product = await findProductById(id);
+  const product = await findBMartProductById(id);
   if (!product) {
     return { status: false, message: "IMPROPER_PRODUCT_ID" };
   }
@@ -57,7 +76,7 @@ export const removeBMartProduct = async (id) => {
   if (!validateProductId) {
     return { status: false, message: "INVALID_PRODUCT_ID" };
   }
-  const product = await findProductById(id);
+  const product = await findBMartProductById(id);
   if (!product) {
     return { status: false, message: "IMPROPER_PRODUCT_ID" };
   }
@@ -123,7 +142,7 @@ export const createBMartCategory = async (body, file) => {
   const category = { ...body, imgPath: imgPath };
   await saveBMartCategory(category);
   await uploadBMartCategory(imageName, file);
-  return { status: true, message: "SUCCESS" };
+  return { status: true, message: "SUCCESS", body };
 };
 
 export const findBMartCategory = async (categoryId) => {
@@ -182,4 +201,169 @@ export const findBMartProductsFromCategory = async (categoryId) => {
     mongoose.Types.ObjectId(categoryId)
   );
   return { status: true, message: "SUCCESS", body: allProducts };
+};
+
+//bMartProductExamine
+export const examineBMartProductTrue = async (id, body) => {
+  const validateProductId = mongoose.Types.ObjectId.isValid(id);
+  if (!validateProductId) {
+    return { status: false, message: "INVALID_PRODUCT_ID" };
+  }
+
+  const product = await findBMartProductById(id);
+  if (!product) {
+    return { status: false, message: "IMPROPER_PRODUCT_ID" };
+  }
+  await setBMartProductExamine(id, JSON.parse(body.examineYN));
+  if (JSON.parse(body.examineYN)) {
+    await saveBMartProductId(product._id, product.categoryId);
+  } else {
+    await deleteBMartProductId(product._id, product.categoryId);
+  }
+
+  return { status: true, message: "SUCCESS", body };
+};
+
+//event
+export const createBMartEvent = async (body) => {
+  if (await findBMartEventByName(body.name)) {
+    return { status: false, message: "DUPLICATED_NAME" };
+  }
+  await saveBMartEvent(body);
+  return { status: true, message: "SUCCESS", body };
+};
+
+export const findBMartEvent = async (id) => {
+  const validateEventId = mongoose.Types.ObjectId.isValid(id);
+  if (!validateEventId) {
+    return { status: false, message: "INVALID_EVENT_ID" };
+  }
+
+  const bMartEvent = await findBMartEventAllProducts(
+    mongoose.Types.ObjectId(id)
+  );
+  if (!bMartEvent) {
+    return { status: false, message: "IMPROPER_PRODUCT_ID" };
+  }
+  return { status: true, message: "SUCCESS", body: bMartEvent };
+};
+
+export const removeBMartEvent = async (id) => {
+  const validateEventId = mongoose.Types.ObjectId.isValid(id);
+  if (!validateEventId) {
+    return { status: false, message: "INVALID_EVENT_ID" };
+  }
+  return { status: true, message: "SUCCESS", body: await eraseBMartEvent(id) };
+};
+
+export const updateBMartEvent = async (body, id) => {
+  const validateEventId = mongoose.Types.ObjectId.isValid(id);
+  if (!validateEventId) {
+    return { status: false, message: "INVALID_EVENT_ID" };
+  }
+  let event = await findBMartEventById(id);
+  if (!event) {
+    return { status: false, message: "IMPROPER_EVENT_ID" };
+  }
+
+  const eventBody = { ...body };
+  let products = await findBMartProductAllExamined();
+  if (eventBody.productId) {
+    products = products.map((a) => a._id.toString());
+    products = products.filter((a) => eventBody.productId.includes(a));
+    const duplicated = event.productId.filter((id) =>
+      products.includes(id.toString())
+    );
+    if (duplicated.length > 0) {
+      return { status: false, message: "DUPLICATED_PRODUCT" };
+    }
+    eventBody.productId = products;
+    for (const id of event.productId) {
+      products.indexOf(id) === -1
+        ? eventBody.productId.push(id)
+        : { status: false, message: "DUPLICATED_PRODUCT" };
+    }
+  }
+  event = JSON.parse(JSON.stringify(event));
+  await updateField(eventBody, event);
+
+  await editBMartEvent(eventBody, id);
+  return { status: true, message: "SUCCESS", body: eventBody };
+};
+
+export const removeBMartProductFromEvent = async (eventId, productId) => {
+  const validateEventId = mongoose.Types.ObjectId.isValid(eventId);
+  if (!validateEventId) {
+    return { status: false, message: "INVALID_EVENT_ID" };
+  }
+  const validateProductId = mongoose.Types.ObjectId.isValid(productId);
+  if (!validateProductId) {
+    return { status: false, message: "INVALID_PRODUCT_ID" };
+  }
+  const event = await findBMartEventById(eventId);
+  if (!event) {
+    return { status: false, message: "IMPROPER_EVENT_ID" };
+  }
+  const product = await findBMartProductById(productId);
+  if (!product) {
+    return { status: false, message: "IMPROPER_PRODUCT_ID" };
+  }
+
+  const result = await eraseBMartProductFromEvent(eventId, productId);
+  return {
+    status: true,
+    message: "SUCCESS",
+    body: result,
+  };
+};
+
+//sale
+export const createBMartSaleProduct = async (body) => {
+  const validateProductId = mongoose.Types.ObjectId.isValid(body.productId);
+  if (!validateProductId) {
+    return { status: false, message: "INVALID_PRODUCT_ID" };
+  }
+  const product = await findBMartProductById(body.productId);
+  if (!product) {
+    return { status: false, message: "IMPROPER_PRODUCT_ID" };
+  }
+  if (!product.examineYN) {
+    return { status: false, message: "EXAMINE_FALSE" };
+  }
+  const saleProduct = await findSaleProduct(body.productId);
+  if (saleProduct) {
+    return { status: false, message: "DUPLICATED_PRODUCT" };
+  }
+  const saved = await saveBMartSaleProduct(body);
+  return { status: true, message: "SUCCESS", body: saved };
+};
+
+export const findBMartSaleProduct = async () => {
+  const allProduct = await findAllBMartSaleProducts();
+  return { status: true, message: "SUCCESS", body: allProduct };
+};
+
+export const removeBMartSaleProduct = async (id) => {
+  return {
+    status: true,
+    message: "SUCCESS",
+    body: await eraseBMartSaleProduct(id),
+  };
+};
+
+export const updateBMartSaleProduct = async (body, id) => {
+  const validateProductId = mongoose.Types.ObjectId.isValid(id);
+  if (!validateProductId) {
+    return { status: false, message: "INVALID_PRODUCT_ID" };
+  }
+  let sale = await findSaleProduct(id);
+  if (!sale) {
+    return { status: false, message: "IMPROPER_PRODUCT_ID" };
+  }
+  sale = JSON.parse(JSON.stringify(sale));
+
+  const saleBody = { ...body };
+  await updateField(saleBody, sale);
+  await editBMartSaleProduct(saleBody, id);
+  return { status: true, message: "SUCCESS", body: saleBody };
 };
