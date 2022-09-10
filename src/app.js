@@ -1,7 +1,6 @@
 import express from "express";
 import bodyParser from "body-parser";
 import morgan from "morgan";
-import methodOverride from "method-override";
 const app = express();
 import dotenv from "dotenv";
 import { connectMongo } from "./middleware/mongoose.js";
@@ -17,7 +16,6 @@ import { routerV1 } from "./middleware/router.main.js";
     req.multer = {};
     next();
   });
-  app.use(methodOverride());
   app.use(bodyParser.json());
   // app.use(bodyParser.json({ type: "application/vnd.api+json" }));
   // app.use(bodyParser.urlencoded({ extended: false }));
