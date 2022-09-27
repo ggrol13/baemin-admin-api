@@ -18,18 +18,15 @@ import {
 } from "./store.service.js";
 import {
   menuCategoryValidate,
-  menuValidate,
   putMenuCategoryValidate,
   putStoreValidate,
   putValidateMenu,
   putValidateStoreCategory,
-  storeCategoryValidate,
   storeValidate,
 } from "./store.validate.js";
 import { BAD_REQUEST } from "../../common/http-code.js";
 import { ApiError } from "../../common/api-error.js";
 import { ApiSuccess } from "../../common/api-response.js";
-import { putLiveCategoryValidate } from "../shopping-live/shopping-live.validate.js";
 
 export const insertStore = async (req, res) => {
   const error = storeValidate.validate(req.body);
