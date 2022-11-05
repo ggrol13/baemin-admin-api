@@ -27,7 +27,6 @@ import {
   uploadCategoryStore,
   uploadMenuStore,
   uploadPutMenuStore,
-  uploadPutStoreCategory,
 } from "../../middleware/multer.js";
 import { updateField } from "../../common/update-field.js";
 import { v4 as uuidv4 } from "uuid";
